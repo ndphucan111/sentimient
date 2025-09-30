@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công cụ Phân tích Cảm xúc AI Cơ bản</title>
+    <style>
+    */
+    
+    body { 
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+        max-width: 700px; 
+        margin: 50px auto; 
+        padding: 30px; 
+        background-color: #1f1f1f; /* Nền hộp (Card) */
+        border: 1px solid #333333; /* Đường viền tối */
+        border-radius: 12px; 
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+        color: #e0e0e0; /* Chữ màu sáng */
+    }
+    
+    /* Thiết lập nền chung cho toàn bộ trang nếu bạn muốn cả khu vực bên ngoài body cũng là nền tối */
+    html {
+        background-color: #121212;
+    }
+
+    h1 { 
+        text-align: center; 
+        color: #64b5f6; /* Xanh Dương Sáng */
+        margin-bottom: 25px;
+        font-size: 2em;
+        font-weight: 700;
+    }
+    
+    p {
+        text-align: center;
+        margin-bottom: 30px;
+        color: #b0b0b0; /* Chữ phụ hơi tối hơn */
+    }
+
+    textarea { 
+        width: 100%; 
+        height: 180px; 
+        padding: 15px; 
+        box-sizing: border-box; 
+        margin-bottom: 20px; 
+        border: 2px solid #333333; 
+        border-radius: 8px; 
+        resize: vertical;
+        font-size: 1.1em;
+        background-color: #2c2c2c; /* Nền ô nhập liệu */
+        color: #ffffff; /* Chữ trong ô nhập liệu */
+        transition: border-color 0.3s ease;
+    }
+    
+    textarea:focus {
+        border-color: #64b5f6; /* Tập trung (focus) */
+        outline: none;
+    }
+
+    button { 
+        background-color: #64b5f6; /* Xanh Dương Sáng */
+        color: #1f1f1f; /* Chữ tối trên nền sáng */
+        padding: 12px 15px; 
+        border: none; 
+        border-radius: 8px; 
+        cursor: pointer; 
+        font-size: 1.1em; 
+        width: 100%; 
+        font-weight: 600;
+        transition: background-color 0.3s ease;
+    }
+    
+    button:hover { 
+        background-color: #42a5f5; /* Sáng hơn khi di chuột */
+    }
+
+    /* Hiển thị Kết quả */
+    #result { 
+        margin-top: 25px; 
+        padding: 20px; 
+        border-radius: 8px; 
+        font-weight: bold; 
+        font-size: 1.2em; 
+        text-align: center; 
+        display: none; 
+        transition: all 0.5s ease;
+    }
+    
+    /* Màu sắc cụ thể cho từng trạng thái (giữ nguyên màu sáng để nổi bật) */
+    .positive-result { 
+        border: 2px solid #66bb6a; /* Xanh lá */
+        background-color: #384e3a; 
+        color: #a5d6a7; 
+    }
+
+    .negative-result { 
+        border: 2px solid #ef5350; /* Đỏ */
+        background-color: #4e3838; 
+        color: #ffcdd2; 
+    }
+
+    .error-result { 
+        border: 2px solid #ffb300; /* Vàng/Cam lỗi */
+        background-color: #4f4633; 
+        color: #ffe082; 
+    }
+</style>
+</head>
+<body>
+    <h1>Công cụ Phân tích Cảm xúc Văn bản (AI)</h1>
+    <p>Nhập một câu hoặc đoạn văn bản tiếng Anh để xem cảm xúc (Tích cực/Tiêu cực) của nó.</p>
+    
+    <textarea id="inputText" placeholder="Ví dụ: This product is absolutely amazing and the customer service was great!"></textarea>
+    
+    <button onclick="analyzeSentiment()">Phân tích Cảm xúc</button>
+    
+    <div id="result"></div>
+
+    <script>
+    async function analyzeSentiment() {
+        const inputText = document.getElementById('inputText').value;
+        const resultDiv = document.getElementById('result');
+        
+        // Thiết lập ban đầu
+        resultDiv.style.display = 'none';
+        resultDiv.className = ''; // Xóa tất cả class cũ
+        
+        if (inputText.trim() === "") {
+            resultDiv.innerHTML = 'Vui lòng nhập văn bản.';
+            resultDiv.classList.add('error-result');
+            resultDiv.style.display = 'block';
+            return;
+        }
+
+        try {
+            // Gửi request POST đến API Flask
+            const response = await fetch('/predict_sentiment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text: inputText })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.status === 'success') {
+                const sentiment = data.predicted_sentiment;
+                
+                // Xác định class CSS dựa trên kết quả AI
+                if (sentiment.includes('Tích cực')) {
+                    resultDiv.classList.add('positive-result');
+                } else if (sentiment.includes('Tiêu cực')) {
+                    resultDiv.classList.add('negative-result');
+                } else {
+                    resultDiv.classList.add('error-result'); // Trường hợp khác
+                }
+
+                resultDiv.innerHTML = `Kết quả: <strong>${sentiment}</strong>`;
+            } else {
+                // Xử lý lỗi từ server
+                resultDiv.innerHTML = `Lỗi phân tích: ${data.error || data.result}`;
+                resultDiv.classList.add('error-result');
+            }
+        } catch (error) {
+            // Xử lý lỗi mạng/kết nối
+            resultDiv.innerHTML = 'Lỗi kết nối với máy chủ AI.';
+            resultDiv.classList.add('error-result');
+            console.error('Lỗi:', error);
+        }
+        
+        resultDiv.style.display = 'block';
+    }
+</script>
+</body>
+</html>
